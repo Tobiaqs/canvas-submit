@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# this script is used to quickly run canvas_submit without
+# having to spawn a pipenv shell first
+
+# set the path of your virtual environment here
+VENV="/home/me/.local/share/virtualenvs/canvas-submit-5JO80r4p"
+# set the path of this repository here
+DIR=/home/me/repos/canvas-submit
+# entry point of the application
+ENTRY="app.py"
+# alternatively use WD="$DIR" (if the application should run with
+# its own root as working directory)
+WD="`pwd`"
+
+# wrap parameters in double quotes as those get lost otherwise
+# when passing them on
+PARAMS=""
+for PARAM in "$@"; do
+    PARAMS="${PARAMS} \"${PARAM}\""
+done
+
+# run the program
+bash -c "source \"$VENV/bin/activate\"; cd \"$WD\"; `cat \"$DIR/.env\" 2>/dev/null | tr '\n' ' '` python \"$DIR/$ENTRY\" $PARAMS"
