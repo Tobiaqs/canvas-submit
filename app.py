@@ -1,3 +1,5 @@
+from __future__ import print_function
+from canvasapi.exceptions import Unauthorized
 from canvasapi import Canvas
 from canvasapi.upload import Uploader
 from canvasapi.requester import Requester
@@ -6,6 +8,10 @@ from os import environ, path, rmdir, unlink
 from io import StringIO
 import tempfile
 import ntpath
+import sys
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
 
 # Default values for various parameters
 default_api_url = None
@@ -86,35 +92,68 @@ def upload_file(file_path):
         rmdir(tmp_dir)
 
     if not response[0]:
-        print("One of the files (" + file_path + ") could not be uploaded.")
+        eprint("😥 One of the files (" + file_path + ") could not be uploaded.")
         exit(1)
 
     return response[1]
 
+print("😁 Just making sure all files actually exist...")
+
 # Check that all files actually exist
 for file_path in args.files:
     if not path.isfile(file_path):
-        print("One of the files (" + file_path + ") does not exist.")
+        eprint("😡 One of the files (" + file_path + ") does not exist.")
         exit(1)
+
+print("📡 Uploading all files to Canvas...")
 
 # Upload all files and store their Canvas IDs
 file_ids = []
 for file_path in args.files:
-    response = upload_file(file_path)
+    try:
+        response = upload_file(file_path)
+    except:
+        eprint("😥 One of the files (" + file_path + ") could not be uploaded.")
+        exit(1)
     file_ids.append(response["id"])
 
-# Get the assignment
-course = canvas.get_course(args.course)
-assignment = course.get_assignment(args.assignment)
+print("💯 All files uploaded!")
 
+print("🔍 Looking up the course with ID " + str(args.course) + "...")
+
+# Get the course and assignment
+try:
+    course = canvas.get_course(args.course)
+except Unauthorized:
+    eprint("😱 You appear to have no access to the specified course.")
+    exit(1)
+except:
+    eprint("😥 We can't get information on the course.")
+    exit(1)
+
+print("🔍 Looking up the assignment with ID " + str(args.assignment) + "...")
+
+try:
+    assignment = course.get_assignment(args.assignment)
+except Unauthorized:
+    eprint("😱 You appear to have no access to the specified assignment.")
+    exit(1)
+except:
+    eprint("😥 We can't get information on the assignment.")
+    exit(1)
+    
 # Create a submission
 submission = {
     "submission_type": "online_upload",
     "file_ids": file_ids
 }
 
-# Post the submission to Canvas
-submission_submitted = assignment.submit(submission)
+try:
+    # Post the submission to Canvas
+    submission_submitted = assignment.submit(submission)
+except:
+    eprint("😱 Submitting the assignment went wrong.")
+    exit(1)
 
-# Print result
-print(submission_submitted)
+print("😊 Assignment submitted successfully.")
+print("👋 Bye!")
